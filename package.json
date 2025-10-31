@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && npm run build",
     "build": "node --max-old-space-size=512 ./node_modules/.bin/nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node --max-old-space-size=512 ./node_modules/.bin/nest start",
@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate:deploy": "prisma migrate resolve --applied 20251031124651_init || prisma migrate deploy",
+    "migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "prisma": {
