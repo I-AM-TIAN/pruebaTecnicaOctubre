@@ -23,7 +23,30 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+API REST para gestión de prescripciones médicas construida con NestJS, Prisma y PostgreSQL. Incluye autenticación JWT y control de acceso basado en roles (RBAC).
+
+### Características
+
+- 🔐 Autenticación JWT con refresh tokens
+- 👥 Sistema de roles (Admin, Doctor, Patient)
+- 💊 Gestión de prescripciones médicas
+- 📄 Generación de PDFs con códigos QR
+- 📚 Documentación automática con Swagger
+- 🗄️ Base de datos PostgreSQL con Prisma ORM
+- 🚀 Listo para desplegar en Railway
+
+## 🚂 Deployment en Railway
+
+Para desplegar este proyecto en Railway:
+
+```bash
+# Ejecuta el helper para generar los secrets
+$ .\railway-helper.ps1
+```
+
+📖 **Guías de Deployment:**
+- [RAILWAY_QUICKSTART.md](./RAILWAY_QUICKSTART.md) - Guía rápida (5 minutos)
+- [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) - Guía completa y detallada
 
 ## Project setup
 
