@@ -19,8 +19,17 @@ async function bootstrap() {
     }),
   );
 
-  // Habilitar CORS
-  app.enableCors();
+  // Habilitar CORS solo para el origen definido en la variable de entorno CORS_ORIGIN
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (corsOrigin) {
+    app.enableCors({
+      origin: corsOrigin,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    });
+  } else {
+    console.warn('CORS no habilitado: variable de entorno CORS_ORIGIN no configurada');
+  }
 
   // Configuración de Swagger
   const config = new DocumentBuilder()
