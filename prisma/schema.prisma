@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+
+  // Relaciones con perfiles
+  doctor  Doctor?
+  patient Patient?
+
+  @@map("users")
+}
+
+enum Role {
+  admin
+  doctor
+  patient
+}
+
+model Doctor {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  specialty String?
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptions Prescription[] @relation("AuthoredBy")
+
+  @@map("doctors")
+}
+
+model Patient {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  birthDate DateTime?
+  createdAt DateTime  @default(now())
+
+  // Relaciones
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptions Prescription[]
+
+  @@map("patients")
+}
+
+model Prescription {
+  id         String             @id @default(cuid())
+  code       String             @unique // para mostrar o QR en PDF
+  status     PrescriptionStatus @default(pending)
+  notes      String?
+  createdAt  DateTime           @default(now())
+  consumedAt DateTime?
+
+  // Relaciones
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   Doctor @relation("AuthoredBy", fields: [authorId], references: [id], onDelete: Cascade)
+
+  items PrescriptionItem[]
+
+  // Índices sugeridos
+  @@index([status, createdAt])
+  @@index([patientId])
+  @@index([authorId])
+  @@map("prescriptions")
+}
+
+enum PrescriptionStatus {
+  pending
+  consumed
+}
+
+model PrescriptionItem {
+  id             String  @id @default(cuid())
+  name           String // Producto digitado manualmente
+  dosage         String?
+  quantity       Int? // unidades indicadas
+  instructions   String?
+  prescriptionId String
+
+  // Relaciones
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@map("prescription_items")
+}
