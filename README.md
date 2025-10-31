@@ -187,19 +187,6 @@ npx prisma migrate reset
 npx prisma migrate status
 ```
 
-## 🚂 Deployment en Railway
-
-Para desplegar este proyecto en Railway:
-
-```bash
-# Ejecuta el helper para generar los secrets
-.\railway-helper.ps1
-```
-
-📖 **Guías de Deployment:**
-- [RAILWAY_QUICKSTART.md](./RAILWAY_QUICKSTART.md) - Guía rápida (5 minutos)
-- [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) - Guía completa y detallada
-
 ## 📖 Estructura del Proyecto
 
 ```
@@ -340,13 +327,6 @@ Get-NetTCPConnection -LocalPort 4001 | Select-Object -Property OwningProcess
 Stop-Process -Id <PID>
 ```
 
-## 📖 Documentación Adicional
-
-- [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - Documentación completa de la API
-- [SWAGGER_DOCUMENTATION.md](./SWAGGER_DOCUMENTATION.md) - Guía de uso de Swagger
-- [AUTH_TESTING.md](./AUTH_TESTING.md) - Guía de testing de autenticación
-- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - Guía de despliegue
-
 ## Run tests
 
 ```bash
@@ -384,10 +364,6 @@ With Mau, you can deploy your application in just a few clicks, allowing you to 
 Este proyecto es de código cerrado y fue desarrollado como prueba técnica.
 
 ---
-
-## 🙏 Agradecimientos
-
-Construido con [NestJS](https://nestjs.com/) - Un framework progresivo de Node.js para construir aplicaciones del lado del servidor eficientes y escalables.
 
 ## Resources
 
