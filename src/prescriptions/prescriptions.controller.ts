@@ -61,6 +61,27 @@ export class PrescriptionsController {
     return this.prescriptionsService.getPrescriptionById(userId, prescriptionId);
   }
 
+  // ==================== ENDPOINTS PARA ADMIN ====================
+
+  /**
+   * GET /admin/prescriptions?status=&doctorId=&patientId=&from=&to=&page=1&limit=10
+   * Obtener todas las prescripciones con filtros (solo Admin)
+   */
+  @Get('admin/prescriptions')
+  @Auth(Role.admin)
+  async getAllPrescriptionsAdmin(
+    @Query('status') status?: PrescriptionStatus,
+    @Query('doctorId') doctorId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
+  ) {
+    this.logger.log(`GET /admin/prescriptions - Admin - status: ${status}`);
+    return this.prescriptionsService.getAllPrescriptions(status, doctorId, patientId, from, to, page, limit);
+  }
+
   // ==================== ENDPOINTS PARA PACIENTES ====================
 
   /**

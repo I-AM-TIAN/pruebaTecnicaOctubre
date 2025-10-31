@@ -659,4 +659,101 @@ export class PrescriptionsService {
       throw new InternalServerErrorException('Error al generar PDF de prescripción');
     }
   }
+
+  /**
+   * Obtener todas las prescripciones con filtros (solo Admin)
+   */
+  async getAllPrescriptions(
+    status?: PrescriptionStatus,
+    doctorId?: string,
+    patientId?: string,
+    from?: string,
+    to?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    try {
+      this.logger.log(`Admin obteniendo prescripciones - status: ${status}, doctorId: ${doctorId}, patientId: ${patientId}`);
+
+      const skip = (page - 1) * limit;
+
+      // Construir filtros
+      const where: any = {};
+
+      // Filtro por status
+      if (status) {
+        where.status = status;
+      }
+
+      // Filtro por doctor (authorId en la tabla prescriptions)
+      if (doctorId) {
+        where.authorId = doctorId;
+      }
+
+      // Filtro por paciente
+      if (patientId) {
+        where.patientId = patientId;
+      }
+
+      // Filtro por rango de fechas
+      if (from || to) {
+        where.createdAt = {};
+        if (from) where.createdAt.gte = new Date(from);
+        if (to) where.createdAt.lte = new Date(to);
+      }
+
+      const [prescriptions, total] = await Promise.all([
+        this.prisma.prescription.findMany({
+          where,
+          skip,
+          take: limit,
+          include: {
+            items: true,
+            patient: {
+              select: {
+                id: true,
+                user: {
+                  select: {
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+            author: {
+              select: {
+                id: true,
+                specialty: true,
+                user: {
+                  select: {
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        }),
+        this.prisma.prescription.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: prescriptions,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error al obtener prescripciones (admin): ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Error al obtener prescripciones');
+    }
+  }
 }
