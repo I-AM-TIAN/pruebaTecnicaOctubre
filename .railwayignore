@@ -1,0 +1,27 @@
+# .railwayignore
+
+# Este archivo le dice a Railway qué archivos ignorar durante el deployment
+
+# Ignorar Dockerfile para forzar el uso de Nixpacks
+Dockerfile.backup
+Dockerfile.example
+
+# Archivos de documentación
+*.md
+!README.md
+
+# Archivos de desarrollo
+.vscode/
+.idea/
+*.log
+test/
+coverage/
+
+# Variables de entorno locales
+.env
+.env.local
+.env.*.local
+
+# Dependencias y build local
+node_modules/
+dist/

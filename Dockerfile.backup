@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Instalar dependencias
+# Instalar dependencias (incluye devDependencies para el build)
 RUN npm ci
 
 # Copiar código fuente
@@ -26,12 +26,14 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Instalar solo dependencias de producción
+# Instalar solo dependencias de producción (incluye @prisma/client)
 RUN npm ci --only=production
+
+# Generar Prisma Client en producción
+RUN npx prisma generate
 
 # Copiar el código compilado desde la etapa de construcción
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/generated ./generated
 
 # Exponer el puerto
 EXPOSE 4001

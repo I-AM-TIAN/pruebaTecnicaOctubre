@@ -1,13 +1,36 @@
 # Solución de Errores de Build en Railway
 
-## Error: "Failed to load config file /app as a TypeScript/JavaScript module"
+## Error 1: "Failed to load config file /app as a TypeScript/JavaScript module"
 
 ### Causa
 El archivo `prisma.config.ts` no es parte de la configuración estándar de Prisma y causaba conflictos durante el build.
 
 ### Solución Aplicada
+✅ Eliminado `prisma.config.ts`
 
-1. **Eliminado `prisma.config.ts`**
+## Error 2: "failed to compute cache key: /app/generated: not found"
+
+### Causa
+Railway estaba usando el Dockerfile en lugar de Nixpacks, y el Dockerfile intentaba copiar el directorio `generated` que ya no existe porque Prisma ahora genera el cliente en la ubicación por defecto (`node_modules/@prisma/client`).
+
+### Solución Aplicada
+
+1. **Renombrado `Dockerfile` a `Dockerfile.backup`**
+   - Railway prioriza Dockerfile sobre Nixpacks
+   - Al renombrar, forzamos el uso de Nixpacks
+
+2. **Creado `.railwayignore`**
+   - Asegura que el Dockerfile no sea considerado
+
+3. **Nixpacks es mejor para este proyecto porque:**
+   - Detecta automáticamente Node.js y Prisma
+   - Maneja correctamente `postinstall` scripts
+   - Más simple y menos propenso a errores
+   - Optimizado para Railway
+
+## Configuración Actualizada
+
+### 1. Eliminado `prisma.config.ts`**
    - Este archivo no es necesario para Prisma
 
 2. **Actualizado `prisma/schema.prisma`**
