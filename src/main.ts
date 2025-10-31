@@ -28,19 +28,23 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
+  // CORS - Configuración mejorada
   const allowedOrigins = normalizeOrigins(process.env.CORS_ORIGIN);
-  if (allowedOrigins.length) {
-    app.enableCors({
-      origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
-      credentials: true,
-      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      exposedHeaders: ['Content-Disposition'],
-    });
-  } else {
-    console.warn('CORS no habilitado: variable CORS_ORIGIN no configurada');
-  }
+  
+  // Si no hay origins configuradas, usar localhost:3000 por defecto en desarrollo
+  const origins = allowedOrigins.length > 0 
+    ? (allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins)
+    : 'http://localhost:3000';
+  
+  app.enableCors({
+    origin: origins,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Disposition'],
+  });
+  
+  console.log('CORS habilitado para:', origins);
 
   // Swagger
   const config = new DocumentBuilder()

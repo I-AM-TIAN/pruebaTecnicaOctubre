@@ -1,12 +1,11 @@
 [phases.setup]
 nixPkgs = ['nodejs_20', 'openssl']
-aptPkgs = []
 
 [phases.install]
-cmds = ['npm ci --include=dev']
+cmds = ['npm ci']
 
 [phases.build]
-cmds = ['npx prisma generate', 'npm run build']
+cmds = ['npm run build']
 
 [start]
 cmd = 'npm run migrate:deploy && npm run start:prod'
