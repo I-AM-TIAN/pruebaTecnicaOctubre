@@ -3,7 +3,7 @@ import { AdminService } from './admin.service';
 import { Role } from '@prisma/client';
 import { Auth } from '../auth/decorators/auth.decorator';
 
-@Controller('users')
+@Controller()
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 
@@ -13,7 +13,7 @@ export class AdminController {
    * GET /users?role=doctor|patient&page=1&limit=10
    * Solo accesible por Admin
    */
-  @Get()
+  @Get('users')
   @Auth(Role.admin)
   async getUsers(
     @Query('role') role?: Role,
@@ -22,5 +22,20 @@ export class AdminController {
   ) {
     this.logger.log(`GET /users - role: ${role}, page: ${page}, limit: ${limit}`);
     return this.adminService.getUsers(role, page, limit);
+  }
+
+  /**
+   * GET /admin/metrics?from=2025-01-01&to=2025-01-31
+   * Obtiene métricas del sistema (totales, estados, tendencias, top doctores)
+   * Solo accesible por Admin
+   */
+  @Get('admin/metrics')
+  @Auth(Role.admin)
+  async getMetrics(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    this.logger.log(`GET /admin/metrics - from: ${from}, to: ${to}`);
+    return this.adminService.getMetrics(from, to);
   }
 }
