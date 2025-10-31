@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, Query, Logger, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Logger, ParseIntPipe, DefaultValuePipe, Res } from '@nestjs/common';
 import { PrescriptionsService } from './prescriptions.service';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { Role, PrescriptionStatus } from '@prisma/client';
 import { Auth } from '../auth/decorators/auth.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { Response } from 'express';
 
 @Controller('prescriptions')
 export class PrescriptionsController {
@@ -58,5 +59,52 @@ export class PrescriptionsController {
   ) {
     this.logger.log(`GET /prescriptions/${prescriptionId} - Doctor: ${userId}`);
     return this.prescriptionsService.getPrescriptionById(userId, prescriptionId);
+  }
+
+  // ==================== ENDPOINTS PARA PACIENTES ====================
+
+  /**
+   * GET /me/prescriptions?status=pending&page=1&limit=10
+   * Obtener mis prescripciones (solo Patient)
+   */
+  @Get('me/prescriptions')
+  @Auth(Role.patient)
+  async getMyPrescriptions(
+    @GetUser('id') userId: string,
+    @Query('status') status?: PrescriptionStatus,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
+  ) {
+    this.logger.log(`GET /me/prescriptions - Patient: ${userId}`);
+    return this.prescriptionsService.getMyPrescriptions(userId, status, page, limit);
+  }
+
+  /**
+   * PUT /prescriptions/:id/consume
+   * Marcar prescripción como consumida (solo Patient y si es suya)
+   */
+  @Put(':id/consume')
+  @Auth(Role.patient)
+  async consumePrescription(
+    @GetUser('id') userId: string,
+    @Param('id') prescriptionId: string,
+  ) {
+    this.logger.log(`PUT /prescriptions/${prescriptionId}/consume - Patient: ${userId}`);
+    return this.prescriptionsService.consumePrescription(userId, prescriptionId);
+  }
+
+  /**
+   * GET /prescriptions/:id/pdf
+   * Descargar prescripción en PDF (solo Patient y si es suya)
+   */
+  @Get(':id/pdf')
+  @Auth(Role.patient)
+  async getPrescriptionPdf(
+    @GetUser('id') userId: string,
+    @Param('id') prescriptionId: string,
+    @Res() res: Response,
+  ) {
+    this.logger.log(`GET /prescriptions/${prescriptionId}/pdf - Patient: ${userId}`);
+    return this.prescriptionsService.generatePrescriptionPdf(userId, prescriptionId, res);
   }
 }
