@@ -72,8 +72,7 @@ export class PrescriptionsController {
    * Obtener una prescripción por ID (solo Doctor)
    */
   @Get(':id')
-  @Auth(Role.doctor)
-  @Auth(Role.patient)
+  @Auth(Role.patient, Role.doctor)
   @ApiOperation({ summary: 'Ver prescripción por ID', description: 'Obtener detalle de una prescripción (solo Doctor)' })
   @ApiParam({ name: 'id', description: 'ID de la prescripción' })
   @ApiResponse({ status: 200, description: 'Prescripción encontrada' })
