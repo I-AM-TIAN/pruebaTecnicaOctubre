@@ -35,62 +35,10 @@ export class PrescriptionsController {
     return this.prescriptionsService.createPrescription(userId, createDto);
   }
 
-  /**
-   * GET /prescriptions?mine=true&status=pending&from=&to=&page=1&limit=10&order=desc
-   * Obtener prescripciones con filtros (solo Doctor)
-   */
-  @Get()
-  @Auth(Role.doctor)
-  @ApiOperation({ summary: 'Listar prescripciones del doctor', description: 'Obtener prescripciones con filtros (solo Doctor)' })
-  @ApiQuery({ name: 'mine', required: false, type: String, example: 'true', description: 'Solo mis prescripciones' })
-  @ApiQuery({ name: 'status', required: false, enum: PrescriptionStatus, description: 'Filtrar por estado' })
-  @ApiQuery({ name: 'from', required: false, type: String, example: '2025-10-01', description: 'Fecha inicial (ISO)' })
-  @ApiQuery({ name: 'to', required: false, type: String, example: '2025-10-31', description: 'Fecha final (ISO)' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'], example: 'desc' })
-  @ApiResponse({ status: 200, description: 'Lista de prescripciones obtenida' })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiResponse({ status: 403, description: 'Sin permisos (requiere rol doctor)' })
-  async getPrescriptions(
-    @GetUser('id') userId: string,
-    @Query('mine') mine?: string,
-    @Query('status') status?: PrescriptionStatus,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
-    @Query('order') order: 'asc' | 'desc' = 'desc',
-  ) {
-    const isMine = mine === 'true';
-    this.logger.log(`GET /prescriptions - Doctor: ${userId}, mine: ${isMine}`);
-    return this.prescriptionsService.getPrescriptions(userId, isMine, status, from, to, page, limit, order);
-  }
-
-  /**
-   * GET /prescriptions/:id
-   * Obtener una prescripción por ID (solo Doctor)
-   */
-  @Get(':id')
-  @Auth(Role.patient, Role.doctor)
-  @ApiOperation({ summary: 'Ver prescripción por ID', description: 'Obtener detalle de una prescripción (solo Doctor)' })
-  @ApiParam({ name: 'id', description: 'ID de la prescripción' })
-  @ApiResponse({ status: 200, description: 'Prescripción encontrada' })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiResponse({ status: 403, description: 'Sin permisos' })
-  @ApiResponse({ status: 404, description: 'Prescripción no encontrada' })
-  async getPrescriptionById(
-    @GetUser('id') userId: string,
-    @Param('id') prescriptionId: string,
-  ) {
-    this.logger.log(`GET /prescriptions/${prescriptionId} - Doctor: ${userId}`);
-    return this.prescriptionsService.getPrescriptionById(userId, prescriptionId);
-  }
-
   // ==================== ENDPOINTS PARA ADMIN ====================
 
   /**
-   * GET /admin/prescriptions?status=&doctorId=&patientId=&from=&to=&page=1&limit=10
+   * GET /prescriptions/admin/prescriptions?status=&doctorId=&patientId=&from=&to=&page=1&limit=10
    * Obtener todas las prescripciones con filtros (solo Admin)
    */
   @Get('admin/prescriptions')
@@ -122,7 +70,7 @@ export class PrescriptionsController {
   // ==================== ENDPOINTS PARA PACIENTES ====================
 
   /**
-   * GET /me/prescriptions?status=pending&page=1&limit=10
+   * GET /prescriptions/me/prescriptions?status=pending&page=1&limit=10
    * Obtener mis prescripciones (solo Patient)
    */
   @Get('me/prescriptions')
@@ -184,5 +132,57 @@ export class PrescriptionsController {
   ) {
     this.logger.log(`GET /prescriptions/${prescriptionId}/pdf - Patient: ${userId}`);
     return this.prescriptionsService.generatePrescriptionPdf(userId, prescriptionId, res);
+  }
+
+  // ==================== ENDPOINTS PARA DOCTOR ====================
+
+  /**
+   * GET /prescriptions?status=pending&from=&to=&page=1&limit=10&order=desc
+   * Obtener prescripciones del doctor autenticado (solo Doctor)
+   */
+  @Get()
+  @Auth(Role.doctor)
+  @ApiOperation({ summary: 'Mis prescripciones como doctor', description: 'Obtener solo las prescripciones creadas por el doctor autenticado' })
+  @ApiQuery({ name: 'status', required: false, enum: PrescriptionStatus, description: 'Filtrar por estado' })
+  @ApiQuery({ name: 'from', required: false, type: String, example: '2025-10-01', description: 'Fecha inicial (ISO)' })
+  @ApiQuery({ name: 'to', required: false, type: String, example: '2025-10-31', description: 'Fecha final (ISO)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'], example: 'desc' })
+  @ApiResponse({ status: 200, description: 'Lista de prescripciones del doctor' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Sin permisos (requiere rol doctor)' })
+  async getPrescriptions(
+    @GetUser('id') userId: string,
+    @Query('status') status?: PrescriptionStatus,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
+    @Query('order') order: 'asc' | 'desc' = 'desc',
+  ) {
+    this.logger.log(`GET /prescriptions - Doctor: ${userId}`);
+    // Siempre pasamos mine=true para que el doctor solo vea sus prescripciones
+    return this.prescriptionsService.getPrescriptions(userId, true, status, from, to, page, limit, order);
+  }
+
+  /**
+   * GET /prescriptions/:id
+   * Obtener una prescripción por ID (Doctor o Patient)
+   */
+  @Get(':id')
+  @Auth(Role.patient, Role.doctor)
+  @ApiOperation({ summary: 'Ver prescripción por ID', description: 'Obtener detalle de una prescripción (Doctor o Patient)' })
+  @ApiParam({ name: 'id', description: 'ID de la prescripción' })
+  @ApiResponse({ status: 200, description: 'Prescripción encontrada' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Sin permisos' })
+  @ApiResponse({ status: 404, description: 'Prescripción no encontrada' })
+  async getPrescriptionById(
+    @GetUser('id') userId: string,
+    @Param('id') prescriptionId: string,
+  ) {
+    this.logger.log(`GET /prescriptions/${prescriptionId} - User: ${userId}`);
+    return this.prescriptionsService.getPrescriptionById(userId, prescriptionId);
   }
 }
