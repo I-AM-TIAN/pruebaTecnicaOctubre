@@ -203,15 +203,19 @@ export class PrescriptionsService {
    */
   async getPrescriptionById(userId: string, prescriptionId: string) {
     try {
-      this.logger.log(`Doctor ${userId} obteniendo prescripción ${prescriptionId}`);
+      this.logger.log(`Usuario ${userId} obteniendo prescripción ${prescriptionId}`);
 
-      // Obtener el doctor ID
+      // Verificar si es doctor o paciente
       const doctor = await this.prisma.doctor.findUnique({
         where: { userId },
       });
 
-      if (!doctor) {
-        throw new ForbiddenException('Solo los doctores pueden ver prescripciones');
+      const patient = await this.prisma.patient.findUnique({
+        where: { userId },
+      });
+
+      if (!doctor && !patient) {
+        throw new ForbiddenException('Solo los doctores y pacientes pueden ver prescripciones');
       }
 
       const prescription = await this.prisma.prescription.findUnique({
@@ -247,6 +251,11 @@ export class PrescriptionsService {
 
       if (!prescription) {
         throw new NotFoundException('Prescripción no encontrada');
+      }
+
+      // Si es paciente, verificar que la prescripción le pertenece
+      if (patient && prescription.patientId !== patient.id) {
+        throw new ForbiddenException('No puedes acceder a una prescripción que no es tuya');
       }
 
       return prescription;
