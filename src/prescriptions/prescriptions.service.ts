@@ -199,23 +199,31 @@ export class PrescriptionsService {
   }
 
   /**
-   * Obtener una prescripción por ID (solo Doctor)
+   * Obtener una prescripción por ID (Doctor, Patient o Admin)
    */
   async getPrescriptionById(userId: string, prescriptionId: string) {
     try {
       this.logger.log(`Usuario ${userId} obteniendo prescripción ${prescriptionId}`);
 
-      // Verificar si es doctor o paciente
-      const doctor = await this.prisma.doctor.findUnique({
-        where: { userId },
+      // Verificar si es doctor, paciente o admin
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          doctor: true,
+          patient: true,
+        },
       });
 
-      const patient = await this.prisma.patient.findUnique({
-        where: { userId },
-      });
+      if (!user) {
+        throw new ForbiddenException('Usuario no encontrado');
+      }
 
-      if (!doctor && !patient) {
-        throw new ForbiddenException('Solo los doctores y pacientes pueden ver prescripciones');
+      const isAdmin = user.role === 'admin';
+      const isDoctor = !!user.doctor;
+      const isPatient = !!user.patient;
+
+      if (!isAdmin && !isDoctor && !isPatient) {
+        throw new ForbiddenException('Solo los doctores, pacientes y administradores pueden ver prescripciones');
       }
 
       const prescription = await this.prisma.prescription.findUnique({
@@ -254,7 +262,8 @@ export class PrescriptionsService {
       }
 
       // Si es paciente, verificar que la prescripción le pertenece
-      if (patient && prescription.patientId !== patient.id) {
+      // El admin y el doctor pueden ver cualquier prescripción
+      if (isPatient && user.patient && prescription.patientId !== user.patient.id) {
         throw new ForbiddenException('No puedes acceder a una prescripción que no es tuya');
       }
 
@@ -421,25 +430,32 @@ export class PrescriptionsService {
   }
 
   /**
-   * Generar y descargar PDF de prescripción (solo Patient y si es suya)
+   * Generar y descargar PDF de prescripción (Patient o Admin)
    */
   async generatePrescriptionPdf(userId: string, prescriptionId: string, res: Response) {
     try {
-      this.logger.log(`Paciente ${userId} generando PDF de prescripción ${prescriptionId}`);
+      this.logger.log(`Usuario ${userId} generando PDF de prescripción ${prescriptionId}`);
 
-      // Obtener el patient ID
-      const patient = await this.prisma.patient.findUnique({
-        where: { userId },
+      // Obtener información del usuario
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
         include: {
-          user: true,
+          patient: true,
         },
       });
 
-      if (!patient) {
-        throw new ForbiddenException('Solo los pacientes pueden descargar sus prescripciones');
+      if (!user) {
+        throw new ForbiddenException('Usuario no encontrado');
       }
 
-      // Verificar que la prescripción existe y pertenece al paciente
+      const isAdmin = user.role === 'admin';
+      const isPatient = !!user.patient;
+
+      if (!isAdmin && !isPatient) {
+        throw new ForbiddenException('Solo los pacientes y administradores pueden descargar prescripciones');
+      }
+
+      // Verificar que la prescripción existe
       const prescription = await this.prisma.prescription.findUnique({
         where: { id: prescriptionId },
         include: {
@@ -475,7 +491,9 @@ export class PrescriptionsService {
         throw new NotFoundException('Prescripción no encontrada');
       }
 
-      if (prescription.patientId !== patient.id) {
+      // Si es paciente, verificar que la prescripción le pertenece
+      // El admin puede descargar cualquier prescripción
+      if (isPatient && user.patient && prescription.patientId !== user.patient.id) {
         throw new ForbiddenException('No puedes acceder a una prescripción que no es tuya');
       }
 
