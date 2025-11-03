@@ -118,7 +118,7 @@ export class PrescriptionsController {
    * Descargar prescripción en PDF (solo Patient y si es suya)
    */
   @Get(':id/pdf')
-  @Auth(Role.patient)
+  @Auth(Role.patient, Role.admin)
   @ApiOperation({ summary: 'Descargar PDF', description: 'Descargar prescripción en formato PDF (solo Patient)' })
   @ApiParam({ name: 'id', description: 'ID de la prescripción' })
   @ApiResponse({ status: 200, description: 'PDF generado', content: { 'application/pdf': {} } })
@@ -171,7 +171,7 @@ export class PrescriptionsController {
    * Obtener una prescripción por ID (Doctor o Patient)
    */
   @Get(':id')
-  @Auth(Role.patient, Role.doctor)
+  @Auth(Role.patient, Role.doctor, Role.admin)
   @ApiOperation({ summary: 'Ver prescripción por ID', description: 'Obtener detalle de una prescripción (Doctor o Patient)' })
   @ApiParam({ name: 'id', description: 'ID de la prescripción' })
   @ApiResponse({ status: 200, description: 'Prescripción encontrada' })
