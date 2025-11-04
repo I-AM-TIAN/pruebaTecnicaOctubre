@@ -12,10 +12,6 @@ export class DoctorsController {
 
   constructor(private readonly doctorsService: DoctorsService) {}
 
-  /**
-   * GET /doctors?page=1&limit=10&search=juan&specialty=cardiologia
-   * Accesible por Admin
-   */
   @Get()
   @Auth(Role.admin)
   @ApiOperation({ summary: 'Listar doctores', description: 'Obtener lista de doctores con filtros (solo Admin)' })

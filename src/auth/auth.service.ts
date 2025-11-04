@@ -24,12 +24,10 @@ export class AuthService {
     try {
       const { email, password } = loginDto;
 
-      // Validar que los campos no estén vacíos
       if (!email || !password) {
         throw new BadRequestException('Email y contraseña son requeridos');
       }
 
-      // Buscar usuario por email
       const user = await this.prisma.user.findUnique({
         where: { email },
         include: {
@@ -43,7 +41,6 @@ export class AuthService {
         throw new UnauthorizedException('Credenciales inválidas');
       }
 
-      // Verificar contraseña
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
@@ -51,13 +48,10 @@ export class AuthService {
         throw new UnauthorizedException('Credenciales inválidas');
       }
 
-      // Remover de blacklist si estaba (permite re-login después de logout)
       this.removeFromBlacklist(user.id);
 
-      // Generar tokens
       const tokens = await this.generateTokens(user.id, user.email, user.role);
 
-      // Excluir password de la respuesta
       const { password: _, ...userWithoutPassword } = user;
 
       this.logger.log(`Usuario ${email} ha iniciado sesión exitosamente`);
@@ -67,7 +61,6 @@ export class AuthService {
         ...tokens,
       };
     } catch (error) {
-      // Si ya es una excepción HTTP de NestJS, la re-lanzamos
       if (
         error instanceof UnauthorizedException ||
         error instanceof BadRequestException
@@ -75,7 +68,6 @@ export class AuthService {
         throw error;
       }
 
-      // Para cualquier otro error, loguear y lanzar error interno
       this.logger.error(
         `Error inesperado durante login: ${error.message}`,
         error.stack,
@@ -88,7 +80,6 @@ export class AuthService {
 
   async refreshToken(userId: string, email: string) {
     try {
-      // Validar que el usuario existe
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, email: true, role: true },
@@ -99,7 +90,6 @@ export class AuthService {
         throw new UnauthorizedException('Usuario no encontrado');
       }
 
-      // Generar nuevos tokens
       const tokens = await this.generateTokens(user.id, user.email, user.role);
 
       this.logger.log(`Tokens renovados para usuario: ${email}`);
@@ -165,7 +155,6 @@ export class AuthService {
 
   async logout(userId: string, email: string) {
     try {
-      // Agregar el userId a la blacklist para invalidar todos sus tokens
       this.tokenBlacklist.add(userId);
 
       this.logger.log(`Usuario ${email} (ID: ${userId}) ha cerrado sesión. Token invalidado.`);
@@ -183,17 +172,11 @@ export class AuthService {
     }
   }
 
-  /**
-   * Verifica si un token ha sido invalidado (usuario cerró sesión)
-   */
   isTokenBlacklisted(userId: string): boolean {
     return this.tokenBlacklist.has(userId);
   }
 
-  /**
-   * Remueve un usuario de la blacklist (útil para re-login)
-   */
-  removeFromBlacklist(userId: string): void {
+  private removeFromBlacklist(userId: string): void {
     this.tokenBlacklist.delete(userId);
   }
 

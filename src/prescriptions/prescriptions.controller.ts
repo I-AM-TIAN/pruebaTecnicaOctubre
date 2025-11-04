@@ -15,10 +15,6 @@ export class PrescriptionsController {
 
   constructor(private readonly prescriptionsService: PrescriptionsService) {}
 
-  /**
-   * POST /prescriptions
-   * Crear una nueva prescripción (solo Doctor)
-   */
   @Post()
   @Auth(Role.doctor)
   @ApiOperation({ summary: 'Crear prescripción', description: 'Crear una nueva prescripción médica (solo Doctor)' })
@@ -35,12 +31,6 @@ export class PrescriptionsController {
     return this.prescriptionsService.createPrescription(userId, createDto);
   }
 
-  // ==================== ENDPOINTS PARA ADMIN ====================
-
-  /**
-   * GET /prescriptions/admin/prescriptions?status=&doctorId=&patientId=&from=&to=&page=1&limit=10
-   * Obtener todas las prescripciones con filtros (solo Admin)
-   */
   @Get('admin/prescriptions')
   @Auth(Role.admin)
   @ApiOperation({ summary: 'Todas las prescripciones (Admin)', description: 'Ver todas las prescripciones del sistema con filtros (solo Admin)' })
@@ -67,12 +57,6 @@ export class PrescriptionsController {
     return this.prescriptionsService.getAllPrescriptions(status, doctorId, patientId, from, to, page, limit);
   }
 
-  // ==================== ENDPOINTS PARA PACIENTES ====================
-
-  /**
-   * GET /prescriptions/me/prescriptions?status=pending&page=1&limit=10
-   * Obtener mis prescripciones (solo Patient)
-   */
   @Get('me/prescriptions')
   @Auth(Role.patient)
   @ApiOperation({ summary: 'Mis prescripciones', description: 'Ver mis prescripciones como paciente (solo Patient)' })
@@ -92,10 +76,6 @@ export class PrescriptionsController {
     return this.prescriptionsService.getMyPrescriptions(userId, status, page, limit);
   }
 
-  /**
-   * PUT /prescriptions/:id/consume
-   * Marcar prescripción como consumida (solo Patient y si es suya)
-   */
   @Put(':id/consume')
   @Auth(Role.patient)
   @ApiOperation({ summary: 'Consumir prescripción', description: 'Marcar una prescripción como consumida (solo Patient)' })
@@ -113,10 +93,6 @@ export class PrescriptionsController {
     return this.prescriptionsService.consumePrescription(userId, prescriptionId);
   }
 
-  /**
-   * GET /prescriptions/:id/pdf
-   * Descargar prescripción en PDF (solo Patient y si es suya)
-   */
   @Get(':id/pdf')
   @Auth(Role.patient, Role.admin)
   @ApiOperation({ summary: 'Descargar PDF', description: 'Descargar prescripción en formato PDF (solo Patient)' })
@@ -134,12 +110,6 @@ export class PrescriptionsController {
     return this.prescriptionsService.generatePrescriptionPdf(userId, prescriptionId, res);
   }
 
-  // ==================== ENDPOINTS PARA DOCTOR ====================
-
-  /**
-   * GET /prescriptions?status=pending&from=&to=&page=1&limit=10&order=desc
-   * Obtener prescripciones del doctor autenticado (solo Doctor)
-   */
   @Get()
   @Auth(Role.doctor)
   @ApiOperation({ summary: 'Mis prescripciones como doctor', description: 'Obtener solo las prescripciones creadas por el doctor autenticado' })
@@ -162,14 +132,9 @@ export class PrescriptionsController {
     @Query('order') order: 'asc' | 'desc' = 'desc',
   ) {
     this.logger.log(`GET /prescriptions - Doctor: ${userId}`);
-    // Siempre pasamos mine=true para que el doctor solo vea sus prescripciones
     return this.prescriptionsService.getPrescriptions(userId, true, status, from, to, page, limit, order);
   }
 
-  /**
-   * GET /prescriptions/:id
-   * Obtener una prescripción por ID (Doctor o Patient)
-   */
   @Get(':id')
   @Auth(Role.patient, Role.doctor, Role.admin)
   @ApiOperation({ summary: 'Ver prescripción por ID', description: 'Obtener detalle de una prescripción (Doctor o Patient)' })

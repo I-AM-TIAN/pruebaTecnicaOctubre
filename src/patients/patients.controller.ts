@@ -12,10 +12,6 @@ export class PatientsController {
 
   constructor(private readonly patientsService: PatientsService) {}
 
-  /**
-   * GET /patients?page=1&limit=10&search=maria
-   * Accesible por Admin y Doctor
-   */
   @Get()
   @Auth(Role.admin, Role.doctor)
   @ApiOperation({ summary: 'Listar pacientes', description: 'Obtener lista de pacientes con filtros (Admin y Doctor)' })

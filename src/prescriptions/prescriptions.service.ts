@@ -12,14 +12,10 @@ export class PrescriptionsService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Crear una nueva prescripción (solo Doctor)
-   */
   async createPrescription(userId: string, createDto: CreatePrescriptionDto) {
     try {
       this.logger.log(`Doctor ${userId} creando prescripción para paciente ${createDto.patientId}`);
 
-      // Obtener el doctor ID del userId
       const doctor = await this.prisma.doctor.findUnique({
         where: { userId },
       });
@@ -28,7 +24,6 @@ export class PrescriptionsService {
         throw new ForbiddenException('Solo los doctores pueden crear prescripciones');
       }
 
-      // Verificar que el paciente existe
       const patient = await this.prisma.patient.findUnique({
         where: { id: createDto.patientId },
       });
@@ -37,10 +32,8 @@ export class PrescriptionsService {
         throw new NotFoundException('Paciente no encontrado');
       }
 
-      // Generar código único para la prescripción
       const code = `RX-${nanoid(10).toUpperCase()}`;
 
-      // Crear prescripción con items
       const prescription = await this.prisma.prescription.create({
         data: {
           code,
@@ -92,9 +85,6 @@ export class PrescriptionsService {
     }
   }
 
-  /**
-   * Obtener prescripciones con filtros (solo Doctor)
-   */
   async getPrescriptions(
     userId: string,
     mine: boolean = false,
@@ -108,7 +98,6 @@ export class PrescriptionsService {
     try {
       this.logger.log(`Doctor ${userId} obteniendo prescripciones - mine: ${mine}, status: ${status}`);
 
-      // Obtener el doctor ID
       const doctor = await this.prisma.doctor.findUnique({
         where: { userId },
       });
@@ -119,20 +108,16 @@ export class PrescriptionsService {
 
       const skip = (page - 1) * limit;
 
-      // Construir filtros
       const where: any = {};
 
-      // Si mine=true, solo sus prescripciones
       if (mine) {
         where.authorId = doctor.id;
       }
 
-      // Filtro por status
       if (status) {
         where.status = status;
       }
 
-      // Filtro por rango de fechas
       if (from || to) {
         where.createdAt = {};
         if (from) where.createdAt.gte = new Date(from);
@@ -198,14 +183,10 @@ export class PrescriptionsService {
     }
   }
 
-  /**
-   * Obtener una prescripción por ID (Doctor, Patient o Admin)
-   */
   async getPrescriptionById(userId: string, prescriptionId: string) {
     try {
       this.logger.log(`Usuario ${userId} obteniendo prescripción ${prescriptionId}`);
 
-      // Verificar si es doctor, paciente o admin
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         include: {
@@ -261,8 +242,6 @@ export class PrescriptionsService {
         throw new NotFoundException('Prescripción no encontrada');
       }
 
-      // Si es paciente, verificar que la prescripción le pertenece
-      // El admin y el doctor pueden ver cualquier prescripción
       if (isPatient && user.patient && prescription.patientId !== user.patient.id) {
         throw new ForbiddenException('No puedes acceder a una prescripción que no es tuya');
       }
@@ -278,9 +257,6 @@ export class PrescriptionsService {
     }
   }
 
-  /**
-   * Obtener mis prescripciones (solo Patient)
-   */
   async getMyPrescriptions(
     userId: string,
     status?: PrescriptionStatus,
@@ -290,7 +266,6 @@ export class PrescriptionsService {
     try {
       this.logger.log(`Paciente ${userId} obteniendo sus prescripciones - status: ${status}`);
 
-      // Obtener el patient ID
       const patient = await this.prisma.patient.findUnique({
         where: { userId },
       });
@@ -301,12 +276,10 @@ export class PrescriptionsService {
 
       const skip = (page - 1) * limit;
 
-      // Construir filtros
       const where: any = {
-        patientId: patient.id, // Solo sus prescripciones
+        patientId: patient.id,
       };
 
-      // Filtro por status
       if (status) {
         where.status = status;
       }
@@ -359,14 +332,10 @@ export class PrescriptionsService {
     }
   }
 
-  /**
-   * Marcar prescripción como consumida (solo Patient y si es suya)
-   */
   async consumePrescription(userId: string, prescriptionId: string) {
     try {
       this.logger.log(`Paciente ${userId} marcando prescripción ${prescriptionId} como consumida`);
 
-      // Obtener el patient ID
       const patient = await this.prisma.patient.findUnique({
         where: { userId },
       });
@@ -375,7 +344,6 @@ export class PrescriptionsService {
         throw new ForbiddenException('Solo los pacientes pueden consumir prescripciones');
       }
 
-      // Verificar que la prescripción existe y pertenece al paciente
       const prescription = await this.prisma.prescription.findUnique({
         where: { id: prescriptionId },
       });
@@ -392,7 +360,6 @@ export class PrescriptionsService {
         throw new ForbiddenException('Esta prescripción ya fue consumida');
       }
 
-      // Marcar como consumida
       const updatedPrescription = await this.prisma.prescription.update({
         where: { id: prescriptionId },
         data: {
@@ -429,14 +396,10 @@ export class PrescriptionsService {
     }
   }
 
-  /**
-   * Generar y descargar PDF de prescripción (Patient o Admin)
-   */
   async generatePrescriptionPdf(userId: string, prescriptionId: string, res: Response) {
     try {
       this.logger.log(`Usuario ${userId} generando PDF de prescripción ${prescriptionId}`);
 
-      // Obtener información del usuario
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         include: {
@@ -455,7 +418,6 @@ export class PrescriptionsService {
         throw new ForbiddenException('Solo los pacientes y administradores pueden descargar prescripciones');
       }
 
-      // Verificar que la prescripción existe
       const prescription = await this.prisma.prescription.findUnique({
         where: { id: prescriptionId },
         include: {
@@ -491,23 +453,17 @@ export class PrescriptionsService {
         throw new NotFoundException('Prescripción no encontrada');
       }
 
-      // Si es paciente, verificar que la prescripción le pertenece
-      // El admin puede descargar cualquier prescripción
       if (isPatient && user.patient && prescription.patientId !== user.patient.id) {
         throw new ForbiddenException('No puedes acceder a una prescripción que no es tuya');
       }
 
-      // Crear PDF
       const doc = new PDFDocument({ margin: 50 });
 
-      // Configurar headers para descarga
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=prescripcion-${prescription.code}.pdf`);
 
-      // Pipe del PDF a la respuesta
       doc.pipe(res);
 
-      // === HEADER DEL PDF ===
       doc
         .fontSize(24)
         .font('Helvetica-Bold')
@@ -520,14 +476,12 @@ export class PrescriptionsService {
         .text(`Código: ${prescription.code}`, { align: 'center' })
         .moveDown(1);
 
-      // Línea separadora
       doc
         .moveTo(50, doc.y)
         .lineTo(550, doc.y)
         .stroke()
         .moveDown(1);
 
-      // === INFORMACIÓN DEL DOCTOR ===
       doc
         .fontSize(14)
         .font('Helvetica-Bold')
@@ -542,7 +496,6 @@ export class PrescriptionsService {
         .text(`Email: ${prescription.author.user.email}`)
         .moveDown(1);
 
-      // === INFORMACIÓN DEL PACIENTE ===
       doc
         .fontSize(14)
         .font('Helvetica-Bold')
@@ -608,7 +561,6 @@ export class PrescriptionsService {
 
       doc.moveDown(1);
 
-      // === MEDICAMENTOS ===
       doc
         .fontSize(14)
         .font('Helvetica-Bold')
@@ -639,7 +591,6 @@ export class PrescriptionsService {
         doc.moveDown(0.8);
       });
 
-      // === NOTAS ADICIONALES ===
       if (prescription.notes) {
         doc.moveDown(0.5);
         doc
@@ -655,7 +606,6 @@ export class PrescriptionsService {
           .moveDown(1);
       }
 
-      // === FOOTER ===
       const bottomY = doc.page.height - 100;
       
       doc
@@ -673,7 +623,6 @@ export class PrescriptionsService {
         .fontSize(8)
         .text(`Generado el ${new Date().toLocaleString('es-ES')}`, { align: 'center' });
 
-      // Finalizar el PDF
       doc.end();
 
       this.logger.log(`PDF generado exitosamente para prescripción ${prescriptionId}`);
@@ -687,9 +636,6 @@ export class PrescriptionsService {
     }
   }
 
-  /**
-   * Obtener todas las prescripciones con filtros (solo Admin)
-   */
   async getAllPrescriptions(
     status?: PrescriptionStatus,
     doctorId?: string,
@@ -704,25 +650,20 @@ export class PrescriptionsService {
 
       const skip = (page - 1) * limit;
 
-      // Construir filtros
       const where: any = {};
 
-      // Filtro por status
       if (status) {
         where.status = status;
       }
 
-      // Filtro por doctor (authorId en la tabla prescriptions)
       if (doctorId) {
         where.authorId = doctorId;
       }
 
-      // Filtro por paciente
       if (patientId) {
         where.patientId = patientId;
       }
 
-      // Filtro por rango de fechas
       if (from || to) {
         where.createdAt = {};
         if (from) where.createdAt.gte = new Date(from);

@@ -14,7 +14,6 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto) {
-    // Verificar si el email ya existe
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
     });
@@ -23,10 +22,8 @@ export class UsersService {
       throw new ConflictException('El email ya está registrado');
     }
 
-    // Hashear la contraseña
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    // Crear el usuario
     const user = await this.prisma.user.create({
       data: {
         ...createUserDto,
@@ -103,10 +100,8 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    // Verificar si el usuario existe
     await this.findOne(id);
 
-    // Si se actualiza el email, verificar que no exista
     if (updateUserDto.email) {
       const existingUser = await this.prisma.user.findUnique({
         where: { email: updateUserDto.email },
@@ -117,13 +112,11 @@ export class UsersService {
       }
     }
 
-    // Si se actualiza la contraseña, hashearla
     const dataToUpdate = { ...updateUserDto };
     if (updateUserDto.password) {
       dataToUpdate.password = await bcrypt.hash(updateUserDto.password, 10);
     }
 
-    // Actualizar el usuario
     const user = await this.prisma.user.update({
       where: { id },
       data: dataToUpdate,
@@ -140,10 +133,8 @@ export class UsersService {
   }
 
   async remove(id: string) {
-    // Verificar si el usuario existe
     await this.findOne(id);
 
-    // Eliminar el usuario (cascada eliminará doctor/patient si existen)
     await this.prisma.user.delete({
       where: { id },
     });

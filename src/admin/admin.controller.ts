@@ -12,10 +12,6 @@ export class AdminController {
 
   constructor(private readonly adminService: AdminService) {}
 
-  /**
-   * GET /users?role=doctor|patient&page=1&limit=10
-   * Solo accesible por Admin
-   */
   @Get('users')
   @Auth(Role.admin)
   @ApiOperation({ summary: 'Listar usuarios', description: 'Obtener lista de usuarios con filtros y paginación (solo Admin)' })
@@ -34,12 +30,7 @@ export class AdminController {
     return this.adminService.getUsers(role, page, limit);
   }
 
-  /**
-   * GET /admin/metrics?from=2025-01-01&to=2025-01-31
-   * Obtiene métricas del sistema (totales, estados, tendencias, top doctores)
-   * Solo accesible por Admin
-   */
-  @Get('admin/metrics')
+  @Get('metrics')
   @Auth(Role.admin)
   @ApiOperation({ summary: 'Obtener métricas del sistema', description: 'Estadísticas generales del sistema (solo Admin)' })
   @ApiQuery({ name: 'from', required: false, type: String, example: '2025-10-01', description: 'Fecha inicial (ISO)' })

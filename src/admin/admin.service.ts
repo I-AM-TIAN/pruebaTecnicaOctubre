@@ -8,9 +8,6 @@ export class AdminService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Obtener usuarios con filtros opcionales
-   */
   async getUsers(role?: Role, page: number = 1, limit: number = 10) {
     try {
       this.logger.log(`Obteniendo usuarios - role: ${role}, page: ${page}, limit: ${limit}`);
@@ -67,14 +64,10 @@ export class AdminService {
     }
   }
 
-  /**
-   * Obtener métricas del sistema (Admin)
-   */
   async getMetrics(from?: string, to?: string) {
     try {
       this.logger.log(`Obteniendo métricas del sistema - from: ${from}, to: ${to}`);
 
-      // Filtro de fechas si se proporciona
       const dateFilter = (from || to) ? {
         createdAt: {
           ...(from && { gte: new Date(from) }),
@@ -82,7 +75,6 @@ export class AdminService {
         },
       } : {};
 
-      // === TOTALES GENERALES ===
       const [totalDoctors, totalPatients, totalPrescriptions] = await Promise.all([
         this.prisma.doctor.count(),
         this.prisma.patient.count(),
@@ -91,7 +83,6 @@ export class AdminService {
         ),
       ]);
 
-      // === PRESCRIPCIONES POR ESTADO ===
       const prescriptionsByStatus = await this.prisma.prescription.groupBy({
         by: ['status'],
         _count: {
@@ -105,7 +96,6 @@ export class AdminService {
         consumed: prescriptionsByStatus.find(p => p.status === 'consumed')?._count.status || 0,
       };
 
-      // === PRESCRIPCIONES POR DÍA (últimos días según el rango) ===
       const prescriptionsByDay = await this.prisma.prescription.groupBy({
         by: ['createdAt'],
         _count: {
@@ -117,7 +107,6 @@ export class AdminService {
         },
       });
 
-      // Agrupar por día (sin hora)
       const byDay = prescriptionsByDay.reduce((acc, item) => {
         const date = new Date(item.createdAt).toISOString().split('T')[0];
         const existing = acc.find(d => d.date === date);
@@ -129,7 +118,6 @@ export class AdminService {
         return acc;
       }, [] as Array<{ date: string; count: number }>);
 
-      // === TOP DOCTORES (más prescripciones) ===
       const topDoctors = await this.prisma.prescription.groupBy({
         by: ['authorId'],
         _count: {
@@ -144,7 +132,6 @@ export class AdminService {
         take: 10,
       });
 
-      // Obtener información de los doctores
       const topDoctorsWithInfo = await Promise.all(
         topDoctors.map(async (item) => {
           const doctor = await this.prisma.doctor.findUnique({

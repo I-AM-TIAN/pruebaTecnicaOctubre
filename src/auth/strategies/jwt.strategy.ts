@@ -25,7 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload) {
-    // Verificar si el token está en la blacklist (usuario cerró sesión)
     if (this.authService.isTokenBlacklisted(payload.sub)) {
       throw new UnauthorizedException('Sesión expirada. Por favor, inicie sesión nuevamente');
     }
