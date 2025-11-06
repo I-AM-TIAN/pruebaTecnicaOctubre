@@ -47,6 +47,7 @@ model Doctor {
 model Patient {
   id        String    @id @default(cuid())
   userId    String    @unique
+  phone     String?
   birthDate DateTime?
   createdAt DateTime  @default(now())
 

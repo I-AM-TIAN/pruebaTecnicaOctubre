@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Logger, ParseIntPipe, DefaultValuePipe, Res } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, Logger, ParseIntPipe, DefaultValuePipe, Res, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PrescriptionsService } from './prescriptions.service';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { Role, PrescriptionStatus } from '@prisma/client';
@@ -29,6 +30,54 @@ export class PrescriptionsController {
   ) {
     this.logger.log(`POST /prescriptions - Doctor: ${userId}`);
     return this.prescriptionsService.createPrescription(userId, createDto);
+  }
+
+  @Post('from-audio')
+  @Auth(Role.doctor)
+  @UseInterceptors(FileInterceptor('audio'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ 
+    summary: 'Crear prescripción desde audio', 
+    description: 'Crear una nueva prescripción médica dictando por audio (solo Doctor). El doctor selecciona el paciente y graba el audio con los medicamentos.' 
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['audio', 'patientId'],
+      properties: {
+        audio: {
+          type: 'string',
+          format: 'binary',
+          description: 'Archivo de audio con la prescripción dictada (mp3, ogg, wav, m4a, webm)',
+        },
+        patientId: {
+          type: 'string',
+          description: 'ID del paciente al que se le prescribe',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Prescripción creada exitosamente desde audio' })
+  @ApiResponse({ status: 400, description: 'Audio no proporcionado o patientId faltante' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Sin permisos (requiere rol doctor)' })
+  @ApiResponse({ status: 500, description: 'Error al procesar el audio o crear la prescripción' })
+  async createPrescriptionFromAudio(
+    @GetUser('id') userId: string,
+    @UploadedFile() file: any,
+    @Body('patientId') patientId: string,
+  ) {
+    this.logger.log(`POST /prescriptions/from-audio - Doctor: ${userId}, Patient: ${patientId}`);
+    
+    if (!file) {
+      throw new BadRequestException('Audio file is required');
+    }
+    
+    if (!patientId) {
+      throw new BadRequestException('patientId is required');
+    }
+
+    return this.prescriptionsService.createPrescriptionFromAudio(userId, patientId, file.buffer, file.originalname);
   }
 
   @Get('admin/prescriptions')

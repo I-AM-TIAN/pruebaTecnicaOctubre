@@ -1,5 +1,7 @@
-import { Injectable, Logger, InternalServerErrorException, NotFoundException, ForbiddenException, StreamableFile } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, NotFoundException, ForbiddenException, StreamableFile, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ElevenlabsService } from '../integrations/elevenlabs.service';
+import { OpenaiService } from '../integrations/openai.service';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { PrescriptionStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
@@ -10,7 +12,11 @@ import { Response } from 'express';
 export class PrescriptionsService {
   private readonly logger = new Logger(PrescriptionsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private elevenlabsService: ElevenlabsService,
+    private openaiService: OpenaiService,
+  ) {}
 
   async createPrescription(userId: string, createDto: CreatePrescriptionDto) {
     try {
@@ -82,6 +88,117 @@ export class PrescriptionsService {
 
       this.logger.error(`Error al crear prescripción: ${error.message}`, error.stack);
       throw new InternalServerErrorException('Error al crear prescripción');
+    }
+  }
+
+  async createPrescriptionFromAudio(
+    userId: string,
+    patientId: string,
+    audioBuffer: Buffer,
+    filename: string,
+  ) {
+    try {
+      this.logger.log(`Doctor ${userId} creando prescripción desde audio para paciente ${patientId}`);
+
+      // 1. Verificar que el usuario es doctor
+      const doctor = await this.prisma.doctor.findUnique({
+        where: { userId },
+      });
+
+      if (!doctor) {
+        throw new ForbiddenException('Solo los doctores pueden crear prescripciones');
+      }
+
+      // 2. Verificar que el paciente existe
+      const patient = await this.prisma.patient.findUnique({
+        where: { id: patientId },
+      });
+
+      if (!patient) {
+        throw new NotFoundException('Paciente no encontrado');
+      }
+
+      // 3. Transcribir el audio usando ElevenLabs
+      this.logger.log('Transcribiendo audio...');
+      const transcribedText = await this.elevenlabsService.transcribe(audioBuffer, filename);
+      
+      if (!transcribedText || transcribedText.trim() === '') {
+        throw new BadRequestException('No se pudo transcribir el audio o está vacío');
+      }
+
+      this.logger.log(`Texto transcrito: ${transcribedText}`);
+
+      // 4. Estructurar la prescripción usando OpenAI
+      this.logger.log('Estructurando prescripción con IA...');
+      const structuredData = await this.openaiService.structurePrescription(transcribedText);
+
+      if (!structuredData.items || structuredData.items.length === 0) {
+        throw new BadRequestException('No se pudieron extraer medicamentos del audio');
+      }
+
+      this.logger.log(`Items extraídos: ${structuredData.items.length}`);
+
+      // 5. Crear la prescripción en la base de datos
+      const code = `RX-${nanoid(10).toUpperCase()}`;
+
+      const prescription = await this.prisma.prescription.create({
+        data: {
+          code,
+          notes: structuredData.notes || `Prescripción creada por audio. Transcripción: ${transcribedText}`,
+          authorId: doctor.id,
+          patientId: patientId,
+          items: {
+            create: structuredData.items,
+          },
+        },
+        include: {
+          items: true,
+          patient: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              specialty: true,
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      this.logger.log(`Prescripción ${code} creada exitosamente desde audio`);
+
+      return {
+        ...prescription,
+        transcription: transcribedText,
+        aiProcessed: true,
+      };
+    } catch (error) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      this.logger.error(`Error al crear prescripción desde audio: ${error.message}`, error.stack);
+      throw new InternalServerErrorException(
+        'Error al procesar el audio y crear la prescripción: ' + error.message,
+      );
     }
   }
 
